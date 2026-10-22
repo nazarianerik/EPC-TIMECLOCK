@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Employees · {{ shop_name }}{% endblock %}
+{% block wrap_class %}wide{% endblock %}
+{% block nav %}{% include "_admin_nav.html" %}{% endblock %}
+{% block content %}
+
+  <h2 style="margin-top:0">Add an employee</h2>
+  <form class="form-grid" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="add">
+    <label>Name (as it should appear on the button)
+      <input type="text" name="name" maxlength="60" required>
+    </label>
+    <button class="btn-primary">Add</button>
+  </form>
+
+  <h2>Employees</h2>
+  {% if employees %}
+    <div class="table-wrap">
+      <table>
+        <tr><th>Name</th><th>Status</th><th>Rename</th><th></th></tr>
+        {% for emp in employees %}
+          <tr>
+            <td><strong>{{ emp.name }}</strong></td>
+            <td>{% if emp.active %}<span class="pill in">Active</span>{% else %}<span class="pill out">Inactive</span>{% endif %}</td>
+            <td>
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="rename">
+                <input type="hidden" name="employee_id" value="{{ emp.id }}">
+                <input type="text" name="name" value="{{ emp.name }}" maxlength="60" required style="width:12em">
+                <button class="btn-small">Save</button>
+              </form>
+            </td>
+            <td>
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="employee_id" value="{{ emp.id }}">
+                {% if emp.active %}
+                  <input type="hidden" name="action" value="deactivate">
+                  <button class="btn-small">Deactivate</button>
+                {% else %}
+                  <input type="hidden" name="action" value="activate">
+                  <button class="btn-small">Reactivate</button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+    <p class="muted small">Deactivated employees disappear from the clock-in screen, but their past hours are kept.</p>
+  {% else %}
+    <p class="muted">No employees yet.</p>
+  {% endif %}
+
+  <h2>Wall tag</h2>
+  <p>Write this URL onto the NFC tag:</p>
+  <p><span class="code" style="font-size:1.1rem">{{ tag_url }}</span></p>
+  <p class="muted small">This only stays correct if this computer always gets the same address on your network.
+    See "Give the PC a fixed address" in SETUP.md.</p>
+{% endblock %}

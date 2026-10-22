@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ emp.name }} · {{ shop_name }}{% endblock %}
+{% block content %}
+  <div class="shop">{{ shop_name }}</div>
+  <h1>Hi, {{ emp.name }}</h1>
+
+  <div class="status-card">
+    {% if is_in %}
+      <span class="pill in">Clocked in</span>
+      <p style="margin:10px 0 0">Since <strong>{{ fmt_time(since) }}</strong>
+        {% if since.date() != now_date %}on {{ fmt_date(since.date()) }}{% endif %}
+        · {{ fmt_hm(so_far) }} so far</p>
+    {% else %}
+      <span class="pill out">Clocked out</span>
+      <p style="margin:10px 0 0" class="muted">Worked today: {{ fmt_hm(today_total) }}</p>
+    {% endif %}
+  </div>
+
+  <form method="post" action="{{ url_for('punch') }}" data-once>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="employee_id" value="{{ emp.id }}">
+    {% if is_in %}
+      <input type="hidden" name="action" value="OUT">
+      <button class="big-btn out">Clock Out</button>
+    {% else %}
+      <input type="hidden" name="action" value="IN">
+      <button class="big-btn in">Clock In</button>
+    {% endif %}
+  </form>
+
+  <a class="switch small" href="{{ url_for('switch_employee') }}">Not {{ emp.name }}? Switch person</a>
+{% endblock %}

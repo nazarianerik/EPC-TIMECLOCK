@@ -1,0 +1,10 @@
+<nav class="nav">
+  <span class="brand">{{ shop_name }} · Admin</span>
+  <a href="{{ url_for('admin_dashboard') }}" {% if request.endpoint == 'admin_dashboard' %}class="active"{% endif %}>Timesheet</a>
+  <a href="{{ url_for('admin_events') }}" {% if request.endpoint == 'admin_events' %}class="active"{% endif %}>Event log</a>
+  <a href="{{ url_for('admin_employees') }}" {% if request.endpoint == 'admin_employees' %}class="active"{% endif %}>Employees</a>
+  <form method="post" action="{{ url_for('admin_logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="link-btn">Log out</button>
+  </form>
+</nav>

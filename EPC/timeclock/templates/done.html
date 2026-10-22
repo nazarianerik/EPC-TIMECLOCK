@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="center">
+    <div class="shop">{{ shop_name }}</div>
+    {% if ev.event_type == "IN" %}
+      <div class="done-mark in">&#10003;</div>
+      <h1>{{ ev.employee_name }}, you're clocked in</h1>
+      <div class="done-time">{{ fmt_time(ts) }}</div>
+      <p class="muted">Have a good shift!</p>
+    {% else %}
+      <div class="done-mark out">&#10003;</div>
+      <h1>{{ ev.employee_name }}, you're clocked out</h1>
+      <div class="done-time">{{ fmt_time(ts) }}</div>
+      {% if shift_seconds is not none %}
+        <p>This shift: <strong>{{ fmt_hm(shift_seconds) }}</strong><br>
+           <span class="muted">Today total: {{ fmt_hm(today_total) }}</span></p>
+      {% endif %}
+      <p class="muted">See you next time!</p>
+    {% endif %}
+    <p class="muted small" style="margin-top:32px">You can close this page.</p>
+  </div>
+{% endblock %}

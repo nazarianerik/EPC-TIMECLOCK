@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Admin login · {{ shop_name }}{% endblock %}
+{% block content %}
+  <div class="shop">{{ shop_name }}</div>
+  <h1>Admin login</h1>
+  {% if password_set %}
+    <form method="post" class="status-card" style="display:grid;gap:12px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Password<br>
+        <input type="password" name="password" autofocus autocomplete="current-password" style="width:100%">
+      </label>
+      <button class="btn-primary">Log in</button>
+    </form>
+  {% else %}
+    <div class="flash warn">
+      No admin password has been set yet. On the server computer, open a terminal in the
+      TimeClock folder and run:<br><br>
+      <span class="code">.venv\Scripts\python set_password.py</span><br><br>
+      Then reload this page.
+    </div>
+  {% endif %}
+{% endblock %}

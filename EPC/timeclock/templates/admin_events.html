@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Event log · {{ shop_name }}{% endblock %}
+{% block wrap_class %}wide{% endblock %}
+{% block nav %}{% include "_admin_nav.html" %}{% endblock %}
+{% block content %}
+
+  <h2 style="margin-top:0">Add a missing clock-in or clock-out</h2>
+  <form class="form-grid" method="post" action="{{ url_for('admin_add_event') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Employee
+      <select name="employee_id" required>
+        <option value="">Choose…</option>
+        {% for emp in employees %}
+          <option value="{{ emp.id }}" {% if emp.id == prefill_employee %}selected{% endif %}>{{ emp.name }}{% if not emp.active %} (inactive){% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Type
+      <select name="event_type" required>
+        <option value="IN" {% if prefill_type == "IN" %}selected{% endif %}>Clock in</option>
+        <option value="OUT" {% if prefill_type == "OUT" %}selected{% endif %}>Clock out</option>
+      </select>
+    </label>
+    <label>Date <input type="date" name="date" value="{{ prefill_date }}" required></label>
+    <label>Time <input type="time" name="time" required></label>
+    <label>Note (optional) <input type="text" name="note" maxlength="200" placeholder="e.g. forgot to tap"></label>
+    <button class="btn-primary">Add</button>
+  </form>
+  <p class="muted small">To change a wrong time: add the correct one, then delete the wrong one below.</p>
+
+  <h2>All events</h2>
+  {% include "_range.html" %}
+
+  {% if events %}
+    <div class="table-wrap">
+      <table>
+        <tr><th>Date</th><th>Time</th><th>Employee</th><th>Type</th><th>Source</th><th>Note</th><th></th></tr>
+        {% for e in events %}
+          {% set ts = parse_ts(e.ts) %}
+          <tr>
+            <td>{{ fmt_date(ts.date()) }}</td>
+            <td>{{ fmt_time(ts) }}</td>
+            <td>{{ e.employee_name }}</td>
+            <td>{% if e.event_type == "IN" %}<span class="pill in">In</span>{% else %}<span class="pill out">Out</span>{% endif %}</td>
+            <td class="muted">{{ "Phone tap" if e.source == "tap" else "Admin" }}</td>
+            <td class="muted">{{ e.note }}</td>
+            <td>
+              <form method="post" action="{{ url_for('admin_delete_event', event_id=e.id) }}"
+                    data-confirm="Delete {{ e.employee_name }}'s clock-{{ e.event_type|lower }} at {{ fmt_time(ts) }} on {{ fmt_date(ts.date()) }}?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn-small btn-danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No events in this date range.</p>
+  {% endif %}
+{% endblock %}

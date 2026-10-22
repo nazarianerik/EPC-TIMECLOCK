@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="shop">{{ shop_name }}</div>
+  <h1>Who's clocking?</h1>
+  <p class="muted">Tap your name. This phone will remember you next time.</p>
+
+  {% if employees %}
+    <div class="name-list">
+      {% for emp in employees %}
+        <a class="name-btn" href="{{ url_for('employee_page', employee_id=emp.id) }}">{{ emp.name }}</a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="flash warn">No employees have been added yet. The owner can add them on the admin page.</div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Timesheet · {{ shop_name }}{% endblock %}
+{% block wrap_class %}wide{% endblock %}
+{% block nav %}{% include "_admin_nav.html" %}{% endblock %}
+{% block content %}
+
+  <h2 style="margin-top:0">Right now</h2>
+  <div class="cards">
+    {% for st in statuses %}
+      <div class="card">
+        <div class="name">{{ st.emp.name }}</div>
+        {% if st.is_in %}
+          <span class="pill in">Clocked in</span>
+          <div class="small muted" style="margin:8px 0">
+            Since {{ fmt_time(st.since) }}{% if st.since.date() != today %}, {{ fmt_date(st.since.date()) }}{% endif %}
+            ({{ fmt_hm((now - st.since).total_seconds()) }})
+          </div>
+          <form method="post" action="{{ url_for('admin_clock_out', employee_id=st.emp.id) }}"
+                data-confirm="Clock out {{ st.emp.name }} now?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn-small">Clock out now</button>
+          </form>
+        {% else %}
+          <span class="pill out">Clocked out</span>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="muted">No employees yet. <a href="{{ url_for('admin_employees') }}">Add them here.</a></p>
+    {% endfor %}
+  </div>
+
+  <h2>Timesheet</h2>
+  {% include "_range.html" %}
+
+  {% set missing, orphans = problems %}
+  {% if missing or orphans %}
+    <div class="problems">
+      <strong>Needs attention before payroll:</strong>
+      <ul>
+        {% for s in missing %}
+          {% set d = s.work_date.isoformat() %}
+          <li>
+            {% if s.status == "missing_out" %}
+              {{ s.employee_name }} clocked in {{ fmt_date(s.work_date) }} at {{ fmt_time(s.start) }} but never clocked out.
+              <a href="{{ url_for('admin_events', start=d, end=d, add_employee=s.employee_id, add_type='OUT', add_date=d) }}">Add the clock-out</a>
+            {% elif s.status == "open" %}
+              {{ s.employee_name }} has been clocked in since {{ fmt_date(s.work_date) }} at {{ fmt_time(s.start) }}. Forgot to clock out?
+              <a href="{{ url_for('admin_events', start=d, end=d, add_employee=s.employee_id, add_type='OUT', add_date=d) }}">Add the clock-out</a>
+            {% else %}
+              {{ s.employee_name }}'s shift on {{ fmt_date(s.work_date) }} is {{ fmt_hm(s.seconds) }} long. Please check it.
+              <a href="{{ url_for('admin_events', start=d, end=s.end.date().isoformat(), employee=s.employee_id) }}">Review</a>
+            {% endif %}
+          </li>
+        {% endfor %}
+        {% for o in orphans %}
+          {% set d = o.ts.date().isoformat() %}
+          <li>{{ o.employee_name }} clocked out {{ fmt_date(o.ts.date()) }} at {{ fmt_time(o.ts) }} without clocking in.
+            <a href="{{ url_for('admin_events', start=d, end=d, add_employee=o.employee_id, add_type='IN', add_date=d) }}">Add the clock-in</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <h2>Weekly hours</h2>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Week starting</th>{% for n in names %}<th class="num">{{ n }}</th>{% endfor %}<th class="num">Total</th></tr>
+      {% for w in weeks %}
+        {% set ns = namespace(total=0) %}
+        <tr>
+          <td>{{ fmt_date(w.start) }}{% if w.partial %} <span class="muted small">(partial)</span>{% endif %}</td>
+          {% for n in names %}
+            {% set sec = weekly.get((w.start, n), 0) %}
+            {% set ns.total = ns.total + sec %}
+            <td class="num">{{ fmt_hours(sec) if sec else "–" }}</td>
+          {% endfor %}
+          <td class="num"><strong>{{ fmt_hours(ns.total) }}</strong></td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <h2>Daily hours</h2>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Day</th>{% for n in names %}<th class="num">{{ n }}</th>{% endfor %}<th class="num">Total</th></tr>
+      {% for d in days %}
+        {% set ns = namespace(total=0) %}
+        <tr {% if d.weekday() >= 5 %}class="weekend"{% endif %}>
+          <td>{{ fmt_date(d) }}</td>
+          {% for n in names %}
+            {% set sec = daily.get((d, n), 0) %}
+            {% set ns.total = ns.total + sec %}
+            <td class="num">{{ fmt_hours(sec) if sec else "–" }}</td>
+          {% endfor %}
+          <td class="num">{{ fmt_hours(ns.total) if ns.total else "–" }}</td>
+        </tr>
+      {% endfor %}
+      {% set ns = namespace(total=0) %}
+      <tr class="total">
+        <td>Total</td>
+        {% for n in names %}
+          {% set sec = per_employee.get(n, 0) %}
+          {% set ns.total = ns.total + sec %}
+          <td class="num">{{ fmt_hours(sec) }}</td>
+        {% endfor %}
+        <td class="num">{{ fmt_hours(ns.total) }}</td>
+      </tr>
+    </table>
+  </div>
+  <p class="muted small">Hours are decimal (7.50 = 7 hours 30 minutes). A shift counts on the day it started.</p>
+
+  <h2>Shifts</h2>
+  {% if shifts %}
+    <div class="table-wrap">
+      <table>
+        <tr><th>Employee</th><th>Date</th><th>In</th><th>Out</th><th class="num">Hours</th></tr>
+        {% for s in shifts %}
+          <tr {% if s.status == "missing_out" or s.is_long %}class="flag"{% endif %}>
+            <td>{{ s.employee_name }}</td>
+            <td>{{ fmt_date(s.work_date) }}</td>
+            <td>{{ fmt_time(s.start) }}</td>
+            <td>
+              {% if s.end %}{{ fmt_time(s.end) }}{% if s.end.date() != s.work_date %} <span class="small">({{ fmt_date(s.end.date()) }})</span>{% endif %}
+              {% elif s.status == "open" %}<span class="pill in">still in</span>
+              {% else %}missing{% endif %}
+            </td>
+            <td class="num">{{ fmt_hours(s.seconds) if s.status == "complete" else "–" }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No shifts in this date range.</p>
+  {% endif %}
+
+  <h2>Export for payroll (CSV)</h2>
+  <p class="muted small">Exports use the date range above. CSV files open in Excel, Numbers, or Google Sheets.</p>
+  <div class="form-grid">
+    {% for kind, label in [("weekly", "Weekly hours"), ("daily", "Daily hours"), ("shifts", "Shifts"), ("events", "All events")] %}
+      <a class="btn {% if loop.first %}btn-primary{% endif %}" style="border:1px solid var(--border);border-radius:8px;padding:8px 12px"
+         href="{{ url_for('admin_export', kind=kind, start=start.isoformat(), end=end.isoformat()) }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  <h2>Backup</h2>
+  <p class="small">The server saves an automatic backup every day. You can also
+    <a href="{{ url_for('admin_backup') }}">download a full backup now</a>.</p>
+
+  <p class="muted small" style="margin-top:32px">Wall tag URL: <span class="code">{{ tag_url }}</span></p>
+{% endblock %}

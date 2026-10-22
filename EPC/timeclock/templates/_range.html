@@ -1,0 +1,22 @@
+{# Date range picker. Expects start, end, presets, employee_id; shows an employee filter if `employees` is given. #}
+<div class="presets">
+  {% for label, span in presets.items() %}
+    <a href="{{ url_for(request.endpoint, start=span[0].isoformat(), end=span[1].isoformat(), employee=employee_id) }}">{{ label }}</a>
+  {% endfor %}
+</div>
+<form class="range" method="get">
+  <label>From <input type="date" name="start" value="{{ start.isoformat() }}"></label>
+  <label>To <input type="date" name="end" value="{{ end.isoformat() }}"></label>
+  {% if employees is defined %}
+    <label>Employee
+      <select name="employee">
+        <option value="">Everyone</option>
+        {% for emp in employees %}
+          <option value="{{ emp.id }}" {% if emp.id == employee_id %}selected{% endif %}>{{ emp.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  {% endif %}
+  <button>Show</button>
+</form>
+<p class="muted small" style="margin-top:0">Showing {{ fmt_date(start) }}, {{ start.year }} to {{ fmt_date(end) }}, {{ end.year }}</p>
